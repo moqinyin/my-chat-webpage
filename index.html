@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>公共共享留言板</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; }
+        body { background-color: #f0f2f5; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { text-align: center; margin-bottom: 20px; color: #333; }
+        #message-input { width: 100%; padding: 15px; border: 1px solid #ddd; border-radius: 20px; margin-bottom: 10px; font-size: 16px; }
+        #send-button { width: 100%; padding: 15px; background-color: #0084ff; color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 16px; margin-bottom: 30px; }
+        #send-button:hover { background-color: #0073e6; }
+        #chat-box { margin-top: 20px; }
+        .message { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .message-content { flex-grow: 1; }
+        .message-actions button { background: none; border: none; color: #666; cursor: pointer; margin-left: 10px; }
+        .message-actions button:hover { color: #0084ff; }
+    </style>
+
+    <!-- 最关键的一步：引入 Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>公共共享留言板</h1>
+        <p><strong>提示：</strong>这是一个完全公开的空间。您发送、编辑或删除的任何操作，<strong>所有人都会立即看到</strong>。</p>
+        <input type="text" id="message-input" placeholder="输入你想对大家说的话...">
+        <button id="send-button">发送消息</button>
+
+        <div id="chat-box">
+            <!-- 消息会动态加载在这里 -->
+        </div>
+    </div>
+
+    <script>
+        // *** 第二步：用您自己的配置替换下面的内容 ***
+        // 这串代码您可以在Firebase控制台找到
+        const firebaseConfig = {
+          apiKey: "AIzaSyDJEgkdLHpjKdyngP5XuY_AJGUc5mOjeCg",
+          authDomain: "public-chat-board.firebaseapp.com",
+          databaseURL: "https://public-chat-board-default-rtdb.asia-southeast1.firebasedatabase.app",
+          projectId: "public-chat-board",
+          storageBucket: "public-chat-board.firebasestorage.app",
+          messagingSenderId: "822856065923",
+          appId: "1:822856065923:web:833a3f1a6a4fc4840e8cb6"
+        };
+
+        // 初始化 Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        // 获取数据库的引用
+        const database = firebase.database();
+
+        // 获取页面元素
+        const messageInput = document.getElementById('message-input');
+        const sendButton = document.getElementById('send-button');
+        const chatBox = document.getElementById('chat-box');
+
+        // 发送新消息的函数
+        function sendMessage() {
+            const messageText = messageInput.value.trim();
+            if (messageText === '') return;
+
+            // 在数据库的 "messages" 节点下push一条新数据
+            database.ref('messages/').push({
+                text: messageText,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            });
+
+            messageInput.value = ''; // 清空输入框
+        }
+
+        // 监听发送按钮点击
+        sendButton.addEventListener('click', sendMessage);
+        // 监听回车键
+        messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+
+        // ！！！核心功能：实时监听数据库变化
+        database.ref('messages/').on('value', (snapshot) => {
+            const data = snapshot.val(); // 获取所有消息数据
+            chatBox.innerHTML = ''; // 清空当前聊天框
+
+            if (data) {
+                // 将对象转换为数组并按时间戳排序
+                const messagesArray = Object.entries(data).map(([key, value]) => ({ id: key, ...value }));
+                messagesArray.sort((a, b) => a.timestamp - b.timestamp); // 按时间旧->新排序
+
+                // 循环遍历所有消息，并渲染到页面上
+                messagesArray.forEach(msg => {
+                    const messageEl = document.createElement('div');
+                    messageEl.className = 'message';
+                    messageEl.dataset.id = msg.id; // 存储消息ID，用于后续操作
+
+                    messageEl.innerHTML = `
+                        <div class="message-content">${escapeHtml(msg.text)}</div>
+                        <div class="message-actions">
+                            <button class="edit-btn" onclick="promptEditMessage('${msg.id}')">编辑</button>
+                            <button class="delete-btn" onclick="deleteMessage('${msg.id}')">删除</button>
+                        </div>
+                    `;
+                    chatBox.appendChild(messageEl);
+                });
+            } else {
+                chatBox.innerHTML = '<div class="message"><div class="message-content">还没有消息，快来发第一条吧！</div></div>';
+            }
+            // 自动滚动到底部
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+
+        // 删除消息的函数（任何人都可以调用）
+        function deleteMessage(messageId) {
+            if (confirm('确定要删除这条消息吗？所有人都会看到这个操作。')) {
+                database.ref('messages/' + messageId).remove();
+            }
+        }
+
+        // 编辑消息的函数（任何人都可以调用）
+        function promptEditMessage(messageId) {
+            const messageRef = database.ref('messages/' + messageId);
+            messageRef.once('value', (snapshot) => {
+                const oldText = snapshot.val().text;
+                const newText = prompt('编辑消息：', oldText);
+                if (newText !== null && newText.trim() !== '') { 
+                    messageRef.update({ text: newText.trim() });
+                }
+            });
+        }
+
+        // 一个小工具函数，用于安全地显示HTML
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return unsafe.toString()
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // 将函数暴露给全局，以便HTML中的onclick可以调用
+        window.deleteMessage = deleteMessage;
+        window.promptEditMessage = promptEditMessage;
+    </script>
+</body>
+</html>
