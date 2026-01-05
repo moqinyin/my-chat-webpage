@@ -1,172 +1,66 @@
-<style>
-    * { 
-        box-sizing: border-box; 
-        margin: 0; 
-        padding: 0; 
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-    }
-    
-    html, body {
-        height: 100%;
-        width: 100%;
-        overflow: hidden;
-        position: fixed; /* 防止移动端滚动问题 */
-    }
-    
-    body { 
-        background: #f0f2f5; 
-        display: flex; 
-        flex-direction: column; 
-        height: 100vh;
-        -webkit-tap-highlight-color: transparent; /* 移除移动端点击高亮 */
-    }
-    
-    .container { 
-        display: flex; 
-        flex-direction: column; 
-        height: 100vh;
-        max-height: 100vh;
-        background: white;
-    }
-    
-    .header { 
-        background: #0084ff; 
-        color: white; 
-        padding: clamp(12px, 3vw, 16px); /* 响应式padding */
-        text-align: center;
-        flex-shrink: 0; /* 防止header被压缩 */
-        position: relative;
-        z-index: 10;
-    }
-    
-    .header h1 { 
-        font-size: clamp(1.2em, 4vw, 1.5em); /* 响应式字体大小 */
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    
-    /* 主聊天区域 - 关键修复 */
-    .chat-container { 
-        flex: 1; 
-        overflow-y: auto; 
-        padding: 12px;
-        -webkit-overflow-scrolling: touch; /* 移动端流畅滚动 */
-        min-height: 0; /* 关键：让flex容器正确计算高度 */
-        display: flex;
-        flex-direction: column;
-    }
-    
-    .message { 
-        max-width: 85%; 
-        padding: 10px 14px; 
-        margin-bottom: 10px; 
-        border-radius: 18px; 
-        background: #e4e6eb; 
-        color: #050505;
-        position: relative;
-        word-wrap: break-word;
-        align-self: flex-start;
-        animation: fadeIn 0.3s ease-out;
-    }
-    
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    
-    .message-time { 
-        font-size: 0.7em; 
-        color: #666; 
-        margin-top: 4px; 
-        display: block;
-    }
-    
-    .message-actions { 
-        display: none; 
-        position: absolute; 
-        top: 8px; 
-        right: 10px; 
-    }
-    
-    .admin-active .message-actions { 
-        display: block; 
-    }
-    
-    .action-btn { 
-        background: #0084ff; 
-        color: white; 
-        border: none; 
-        padding: 3px 8px; 
-        margin-left: 5px; 
-        border-radius: 4px; 
-        font-size: 0.8em; 
-        cursor: pointer; 
-    }
-    
-    /* 输入区域 - 关键修复 */
-    .input-area { 
-        padding: clamp(10px, 2.5vw, 15px); /* 响应式padding */
-        background: #f8f9fa; 
-        border-top: 1px solid #ddd; 
-        display: flex; 
-        flex-shrink: 0; /* 关键：防止输入区域被压缩 */
-        align-items: center;
-        position: relative;
-        z-index: 10;
-    }
-    
-    #message-input { 
-        flex: 1; 
-        padding: clamp(10px, 3vw, 12px); 
-        border: 1px solid #ddd; 
-        border-radius: 20px; 
-        font-size: 1em;
-        min-height: 44px; /* 移动端最小可点击区域 */
-        -webkit-appearance: none; /* 移除iOS默认样式 */
-    }
-    
-    #send-button { 
-        padding: clamp(10px, 3vw, 12px) clamp(15px, 4vw, 20px); 
-        background: #0084ff; 
-        color: white; 
-        border: none; 
-        border-radius: 20px; 
-        margin-left: 10px; 
-        font-size: 1em;
-        min-height: 44px; /* 移动端最小可点击区域 */
-        flex-shrink: 0;
-    }
-    
-    .empty-state { 
-        text-align: center; 
-        color: #666; 
-        padding: 40px 20px; 
-        margin: auto; /* 垂直居中 */
-    }
-    
-    /* 加载指示器 */
-    .loading {
-        text-align: center;
-        padding: 20px;
-        color: #666;
-        font-style: italic;
-    }
-</style>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>留言板</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
+        body, html { height: 100%; width: 100%; overflow: hidden; }
+        body { background: #f0f2f5; display: flex; flex-direction: column; height: 100vh; }
+        .container { display: flex; flex-direction: column; height: 100vh; background: white; }
+        .header { background: #0084ff; color: white; padding: 15px; text-align: center; }
+        .header h1 { font-size: 1.5em; }
+        .chat-container { flex: 1; overflow-y: auto; padding: 15px; }
+        .message { 
+            max-width: 80%; 
+            padding: 12px 16px; 
+            margin-bottom: 12px; 
+            border-radius: 18px; 
+            background: #e4e6eb; 
+            color: #050505;
+            position: relative;
+            word-wrap: break-word;
+        }
+        .message-time { font-size: 0.7em; color: #666; margin-top: 5px; }
+        .message-actions { display: none; }
+        .admin-active .message-actions { 
+            display: block; 
+            position: absolute; 
+            top: 8px; 
+            right: 10px; 
+        }
+        .action-btn { 
+            background: #0084ff; 
+            color: white; 
+            border: none; 
+            padding: 3px 8px; 
+            margin-left: 5px; 
+            border-radius: 4px; 
+            font-size: 0.8em; 
+            cursor: pointer; 
+        }
+        .input-area { padding: 15px; background: #f8f9fa; border-top: 1px solid #ddd; display: flex; }
+        #message-input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 20px; }
+        #send-button { padding: 12px 20px; background: #0084ff; color: white; border: none; border-radius: 20px; margin-left: 10px; }
+        .empty-state { text-align: center; color: #666; padding: 40px 20px; }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header"><h1>留言板</h1></div>
+        <div class="chat-container" id="chat-box">
+            <div class="empty-state" id="empty-state">暂无消息</div>
+        </div>
+        <div class="input-area">
+            <input type="text" id="message-input" placeholder="输入消息...">
+            <button id="send-button">发送</button>
+        </div>
+    </div>
 
-<script>
-    // 确保DOM完全加载后再执行
-    document.addEventListener('DOMContentLoaded', function() {
-        // 页面元素
-        const chatBox = document.getElementById('chat-box');
-        const messageInput = document.getElementById('message-input');
-        const sendButton = document.getElementById('send-button');
-        const emptyState = document.getElementById('empty-state');
-        
-        // 立即显示输入区域（关键修复）
-        messageInput.style.visibility = 'visible';
-        sendButton.style.visibility = 'visible';
-        
+    <script>
         // Firebase配置
         const firebaseConfig = {
             apiKey: "AIzaSyDJEgkdLHpjKdyngP5XuY_AJGUc5mOjeCg",
@@ -177,33 +71,26 @@
             messagingSenderId: "822856065923",
             appId: "1:822856065923:web:833a3f1a6a4fc4840e8cb6"
         };
-        
-        // 初始化Firebase
-        let app, database, adminMode = false, editingMessageId = null;
-        
-        try {
-            app = firebase.initializeApp(firebaseConfig);
-            database = firebase.database();
-        } catch (error) {
-            console.error("Firebase初始化失败:", error);
-            chatBox.innerHTML = '<div class="loading">初始化失败，请刷新页面</div>';
-            return;
-        }
-        
-        // 立即聚焦到输入框
-        setTimeout(() => {
-            messageInput.focus();
-            // 确保布局稳定
-            if (typeof window.visualViewport !== 'undefined') {
-                window.visualViewport.addEventListener('resize', adjustLayout);
-            }
-        }, 100);
-        
-        // 发送消息函数
-        window.sendMessage = function() {
+
+        // 初始化
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // 页面元素
+        const chatBox = document.getElementById('chat-box');
+        const messageInput = document.getElementById('message-input');
+        const sendButton = document.getElementById('send-button');
+        const emptyState = document.getElementById('empty-state');
+
+        // 状态
+        let adminMode = false;
+        let editingMessageId = null;
+
+        // 发送消息
+        function sendMessage() {
             const text = messageInput.value.trim();
             if (!text) return;
-            
+
             // 检查是否为"修改"关键词
             if (text === "修改") {
                 adminMode = true;
@@ -211,50 +98,45 @@
                 messageInput.value = "";
                 return;
             }
-            
+
             // 普通消息，存入数据库
             database.ref('messages/').push({
                 text: text,
                 timestamp: firebase.database.ServerValue.TIMESTAMP
             });
-            
+
             messageInput.value = "";
-            messageInput.focus();
-        };
-        
+        }
+
         // 格式化时间
         function formatTime(timestamp) {
             const date = new Date(timestamp);
             return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
         }
-        
+
         // 更新消息显示
         function updateMessagesDisplay() {
-            chatBox.innerHTML = '<div class="loading">加载中...</div>';
-            
             database.ref('messages/').once('value', (snapshot) => {
                 const data = snapshot.val();
                 chatBox.innerHTML = '';
-                
+
                 if (!data) {
                     emptyState.style.display = 'block';
                     chatBox.appendChild(emptyState);
                     return;
                 }
-                
+
                 emptyState.style.display = 'none';
                 const messages = Object.entries(data).map(([id, msg]) => ({ id, ...msg }));
                 messages.sort((a, b) => a.timestamp - b.timestamp);
-                
+
                 messages.forEach(msg => {
                     const div = document.createElement('div');
                     div.className = adminMode ? 'message admin-active' : 'message';
                     div.dataset.id = msg.id;
-                    
+
                     const timeStr = formatTime(msg.timestamp);
-                    const escapedText = msg.text.replace(/&/g, "&amp;")
-                                               .replace(/</g, "&lt;")
-                                               .replace(/>/g, "&gt;");
+                    const escapedText = msg.text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
                     
                     let actionsHtml = '';
                     if (adminMode) {
@@ -265,7 +147,7 @@
                             </div>
                         `;
                     }
-                    
+
                     div.innerHTML = `
                         <div>${escapedText}</div>
                         <div class="message-time">${timeStr}</div>
@@ -274,19 +156,11 @@
                     
                     chatBox.appendChild(div);
                 });
-                
-                // 滚动到底部
-                setTimeout(() => {
-                    chatBox.scrollTop = chatBox.scrollHeight;
-                }, 50);
-            }).catch(error => {
-                console.error("加载消息失败:", error);
-                chatBox.innerHTML = '<div class="loading">加载失败，请稍后重试</div>';
             });
         }
-        
+
         // 编辑消息
-        window.editMessage = function(id) {
+        function editMessage(id) {
             editingMessageId = id;
             database.ref('messages/' + id).once('value', (snapshot) => {
                 const msg = snapshot.val();
@@ -299,67 +173,29 @@
                     });
                 }
             });
-        };
-        
+        }
+
         // 删除消息
-        window.deleteMessage = function(id) {
+        function deleteMessage(id) {
             if (confirm('确定删除这条消息吗？')) {
                 database.ref('messages/' + id).remove();
             }
-        };
-        
-        // 调整布局函数（针对移动端）
-        function adjustLayout() {
-            // 确保输入框可见
-            messageInput.style.height = 'auto';
-            sendButton.style.height = 'auto';
-            
-            // 触发浏览器重绘
-            chatBox.style.display = 'none';
-            chatBox.offsetHeight; // 触发重绘
-            chatBox.style.display = 'flex';
         }
-        
+
         // 事件监听
         sendButton.addEventListener('click', sendMessage);
         messageInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') sendMessage();
         });
-        
+
         // 实时监听消息变化
         database.ref('messages/').on('value', updateMessagesDisplay);
-        
-        // 页面加载完成后立即显示内容
-        window.addEventListener('load', function() {
-            // 设置视口高度（关键移动端修复）
-            const setViewportHeight = () => {
-                const vh = window.innerHeight * 0.01;
-                document.documentElement.style.setProperty('--vh', `${vh}px`);
-            };
-            
-            setViewportHeight();
-            window.addEventListener('resize', setViewportHeight);
-            
-            // 确保输入框可操作
-            messageInput.disabled = false;
-            sendButton.disabled = false;
-            
-            // 初始加载消息
+
+        // 页面加载
+        window.addEventListener('load', () => {
+            messageInput.focus();
             updateMessagesDisplay();
-            
-            // 移动端键盘弹出/收起处理
-            if (window.visualViewport) {
-                window.visualViewport.addEventListener('resize', function() {
-                    setTimeout(() => {
-                        chatBox.scrollTop = chatBox.scrollHeight;
-                    }, 100);
-                });
-            }
         });
-        
-        // 如果load事件已经触发，直接执行
-        if (document.readyState === 'complete') {
-            window.dispatchEvent(new Event('load'));
-        }
-    });
-</script>
+    </script>
+</body>
+</html>
