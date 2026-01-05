@@ -40,17 +40,40 @@
             padding: 20px 30px;
             flex-shrink: 0;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         
-        .header h1 { 
+        .header-content h1 { 
             font-size: 2em; 
             margin-bottom: 5px; 
             font-weight: 700; 
         }
         
-        .header p { 
+        .header-content p { 
             opacity: 0.9; 
             font-size: 0.9em; 
+        }
+        
+        .admin-mode-indicator {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            display: none;
+            align-items: center;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(46, 204, 113, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }
+        }
+        
+        .admin-mode-indicator i {
+            margin-right: 8px;
         }
         
         .chat-container {
@@ -108,86 +131,61 @@
         .message.received .message-time { color: #65676b; }
         .message.sent .message-time { color: rgba(255, 255, 255, 0.85); }
         
-        /* 修改按钮样式 */
-        .modify-btn {
+        /* 操作按钮区域 */
+        .message-actions {
             position: absolute;
-            top: 10px;
+            top: 50%;
             right: 10px;
-            background: transparent;
-            border: none;
-            color: #666;
-            font-size: 0.8em;
-            cursor: pointer;
-            padding: 2px 6px;
-            border-radius: 4px;
-            transition: all 0.2s;
-        }
-        
-        .message.sent .modify-btn {
-            color: rgba(255, 255, 255, 0.7);
-        }
-        
-        .modify-btn:hover {
-            background: rgba(0, 0, 0, 0.05);
-        }
-        
-        .message.sent .modify-btn:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
-        
-        /* 操作菜单样式 */
-        .action-menu {
-            position: absolute;
-            top: 35px;
-            right: 0;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-            padding: 8px 0;
-            min-width: 120px;
-            z-index: 1000;
+            transform: translateY(-50%);
             display: none;
-            animation: fadeIn 0.2s;
+            gap: 5px;
         }
         
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
+        .admin-mode .message-actions {
+            display: flex;
         }
         
-        .action-menu.show {
-            display: block;
-        }
-        
-        .menu-item {
+        .action-btn {
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            font-size: 0.9em;
             display: flex;
             align-items: center;
-            padding: 10px 15px;
-            cursor: pointer;
-            transition: background 0.2s;
+            justify-content: center;
+            transition: all 0.2s;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .action-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .message.received .action-btn {
+            background: white;
             color: #333;
-            font-size: 0.9em;
+            border: 1px solid #e4e6eb;
         }
         
-        .menu-item:hover {
-            background: #f5f5f5;
+        .message.sent .action-btn {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
         }
         
-        .menu-item i {
-            margin-right: 10px;
-            font-size: 1.1em;
+        .action-btn.edit-btn {
+            color: #2ecc71;
         }
         
-        .menu-item.delete {
-            color: #e74c3c;
-        }
-        
-        .menu-item.copy {
+        .action-btn.copy-btn {
             color: #3498db;
         }
         
-        .menu-item.edit {
-            color: #2ecc71;
+        .action-btn.delete-btn {
+            color: #e74c3c;
         }
         
         /* 编辑模式样式 */
@@ -341,8 +339,13 @@
 <body>
     <div class="container" id="main-container">
         <div class="header">
-            <h1>公共留言板</h1>
-            <p>点击消息上的"修改"可进行编辑、删除或复制操作</p>
+            <div class="header-content">
+                <h1>公共留言板</h1>
+                <p>发送特定关键词可激活隐藏功能</p>
+            </div>
+            <div class="admin-mode-indicator" id="admin-indicator">
+                <i>⚙️</i> 管理员模式已激活
+            </div>
         </div>
         <div class="chat-container" id="chat-box">
             <div class="empty-state" id="empty-state">还没有消息，快来第一个发言吧！</div>
@@ -350,19 +353,6 @@
         <div class="input-area">
             <input type="text" id="message-input" placeholder="输入你想说的话...">
             <button id="send-button">发送</button>
-        </div>
-    </div>
-    
-    <!-- 操作菜单模板 -->
-    <div class="action-menu" id="action-menu-template" style="display: none;">
-        <div class="menu-item edit" onclick="handleEdit()">
-            <i>✏️</i> 修改
-        </div>
-        <div class="menu-item copy" onclick="handleCopy()">
-            <i>📋</i> 复制
-        </div>
-        <div class="menu-item delete" onclick="handleDelete()">
-            <i>🗑️</i> 删除
         </div>
     </div>
     
@@ -391,16 +381,31 @@
         const sendButton = document.getElementById('send-button');
         const emptyState = document.getElementById('empty-state');
         const toast = document.getElementById('toast');
+        const adminIndicator = document.getElementById('admin-indicator');
 
-        // 全局变量
-        let currentEditingMessageId = null;
-        let currentEditingMessageText = '';
+        // 🕵️‍♂️ 全局状态
+        let adminMode = false; // 管理员模式状态
+        let currentEditingMessageId = null; // 当前正在编辑的消息ID
+        let currentEditingMessageText = ''; // 当前正在编辑的消息文本
+        const ADMIN_KEYWORD = "修改"; // 触发管理员模式的关键词
 
-        // ✨ 功能函数
+        // 🎯 核心功能函数
+
         function sendMessage() {
             const messageText = messageInput.value.trim();
             if (messageText === '') return;
 
+            // 🕵️‍♂️ 检查是否为管理员关键词
+            if (messageText === ADMIN_KEYWORD) {
+                // 激活管理员模式，但不存储这条消息
+                toggleAdminMode(true);
+                showToast(`管理员模式已激活！所有消息现在可操作。`);
+                messageInput.value = '';
+                messageInput.focus();
+                return; // 不保存到数据库
+            }
+
+            // 正常消息，保存到数据库
             database.ref('messages/').push({
                 text: messageText,
                 timestamp: firebase.database.ServerValue.TIMESTAMP
@@ -408,6 +413,26 @@
 
             messageInput.value = '';
             messageInput.focus();
+        }
+
+        function toggleAdminMode(enable) {
+            adminMode = enable;
+            
+            if (adminMode) {
+                // 激活管理员模式
+                document.body.classList.add('admin-mode');
+                adminIndicator.style.display = 'flex';
+                showToast('管理员模式已激活，所有消息现在可操作');
+            } else {
+                // 关闭管理员模式
+                document.body.classList.remove('admin-mode');
+                adminIndicator.style.display = 'none';
+                // 退出编辑模式
+                cancelEdit();
+            }
+            
+            // 重新渲染消息以显示/隐藏操作按钮
+            renderMessages();
         }
 
         function formatTimestamp(timestamp) {
@@ -443,7 +468,6 @@
                 .replace(/'/g, "&#039;");
         }
 
-        // 🆕 操作菜单功能
         function showToast(message, duration = 2000) {
             toast.textContent = message;
             toast.classList.add('show');
@@ -452,93 +476,53 @@
             }, duration);
         }
 
-        function showActionMenu(messageId, messageText, event) {
-            // 隐藏所有其他菜单
-            document.querySelectorAll('.action-menu').forEach(menu => {
-                menu.classList.remove('show');
-            });
+        // 📝 消息操作功能
+
+        function editMessage(messageId, messageText) {
+            if (!adminMode) return;
             
-            // 获取或创建菜单
-            let menu = document.querySelector(`[data-menu-for="${messageId}"]`);
-            if (!menu) {
-                menu = document.getElementById('action-menu-template').cloneNode(true);
-                menu.id = '';
-                menu.setAttribute('data-menu-for', messageId);
-                menu.style.display = 'none';
-                document.body.appendChild(menu);
-            }
-            
-            // 设置位置
-            const btnRect = event.target.getBoundingClientRect();
-            menu.style.top = `${btnRect.bottom + window.scrollY}px`;
-            menu.style.left = `${btnRect.left + window.scrollX}px`;
-            
-            // 显示菜单
-            menu.classList.add('show');
-            
-            // 存储当前操作的消息
             currentEditingMessageId = messageId;
             currentEditingMessageText = messageText;
             
-            // 点击其他地方关闭菜单
-            setTimeout(() => {
-                const closeMenuHandler = (e) => {
-                    if (!menu.contains(e.target) && e.target !== event.target) {
-                        menu.classList.remove('show');
-                        document.removeEventListener('click', closeMenuHandler);
-                    }
-                };
-                document.addEventListener('click', closeMenuHandler);
-            }, 10);
-        }
-
-        function handleEdit() {
-            if (!currentEditingMessageId) return;
-            
-            const messageElement = document.querySelector(`[data-id="${currentEditingMessageId}"]`);
+            const messageElement = document.querySelector(`[data-id="${messageId}"]`);
             if (!messageElement) return;
             
             // 切换到编辑模式
             messageElement.classList.add('edit-mode');
             messageElement.innerHTML = `
-                <textarea class="edit-input">${escapeHtml(currentEditingMessageText)}</textarea>
+                <textarea class="edit-input">${escapeHtml(messageText)}</textarea>
                 <div class="edit-buttons">
-                    <button class="cancel-btn" onclick="cancelEdit('${currentEditingMessageId}')">取消</button>
-                    <button class="save-btn" onclick="saveEdit('${currentEditingMessageId}')">保存修改</button>
+                    <button class="cancel-btn" onclick="cancelEdit()">取消</button>
+                    <button class="save-btn" onclick="saveEdit()">保存修改</button>
                 </div>
             `;
             messageElement.querySelector('.edit-input').focus();
-            
-            // 隐藏菜单
-            document.querySelector(`[data-menu-for="${currentEditingMessageId}"]`).classList.remove('show');
         }
 
-        function handleCopy() {
-            if (!currentEditingMessageText) return;
+        function copyMessage(messageText) {
+            if (!adminMode) return;
             
-            navigator.clipboard.writeText(currentEditingMessageText).then(() => {
+            navigator.clipboard.writeText(messageText).then(() => {
                 showToast('消息已复制到剪贴板');
             }).catch(err => {
                 console.error('复制失败:', err);
                 showToast('复制失败，请手动复制');
             });
-            
-            // 隐藏菜单
-            document.querySelector(`[data-menu-for="${currentEditingMessageId}"]`).classList.remove('show');
         }
 
-        function handleDelete() {
-            if (!currentEditingMessageId || !confirm('确定要删除这条消息吗？')) return;
+        function deleteMessage(messageId) {
+            if (!adminMode) return;
             
-            database.ref('messages/' + currentEditingMessageId).remove();
+            if (!confirm('确定要删除这条消息吗？')) return;
+            
+            database.ref('messages/' + messageId).remove();
             showToast('消息已删除');
-            
-            // 隐藏菜单
-            document.querySelector(`[data-menu-for="${currentEditingMessageId}"]`).classList.remove('show');
         }
 
-        function saveEdit(messageId) {
-            const messageElement = document.querySelector(`[data-id="${messageId}"]`);
+        function saveEdit() {
+            if (!currentEditingMessageId || !adminMode) return;
+            
+            const messageElement = document.querySelector(`[data-id="${currentEditingMessageId}"]`);
             if (!messageElement) return;
             
             const newText = messageElement.querySelector('.edit-input').value.trim();
@@ -548,17 +532,21 @@
             }
             
             // 更新数据库
-            database.ref('messages/' + messageId).update({
+            database.ref('messages/' + currentEditingMessageId).update({
                 text: newText,
                 edited: true,
                 editedAt: firebase.database.ServerValue.TIMESTAMP
             });
             
             showToast('消息已修改');
+            currentEditingMessageId = null;
+            currentEditingMessageText = '';
         }
 
-        function cancelEdit(messageId) {
-            // 重新渲染消息
+        function cancelEdit() {
+            currentEditingMessageId = null;
+            currentEditingMessageText = '';
+            // 重新渲染消息以退出编辑模式
             renderMessages();
         }
 
@@ -582,14 +570,32 @@
                     }
                     
                     // 构建消息内容
-                    messageElement.innerHTML = `
+                    let messageHtml = `
                         <div class="message-content">${escapeHtml(msg.text)}</div>
                         <span class="message-time">${timeDisplay}</span>
-                        <button class="modify-btn" onclick="showActionMenu('${msg.id}', '${escapeHtml(msg.text).replace(/'/g, "\\'")}', event)">
-                            修改
-                        </button>
                     `;
                     
+                    // 如果处于管理员模式，添加操作按钮
+                    if (adminMode) {
+                        messageHtml += `
+                            <div class="message-actions">
+                                <button class="action-btn edit-btn" title="修改" 
+                                    onclick="editMessage('${msg.id}', '${escapeHtml(msg.text).replace(/'/g, "\\'")}')">
+                                    ✏️
+                                </button>
+                                <button class="action-btn copy-btn" title="复制" 
+                                    onclick="copyMessage('${escapeHtml(msg.text).replace(/'/g, "\\'")}')">
+                                    📋
+                                </button>
+                                <button class="action-btn delete-btn" title="删除" 
+                                    onclick="deleteMessage('${msg.id}')">
+                                    🗑️
+                                </button>
+                            </div>
+                        `;
+                    }
+                    
+                    messageElement.innerHTML = messageHtml;
                     chatBox.appendChild(messageElement);
                 });
                 
@@ -637,6 +643,20 @@
             
             setFullHeight();
             window.addEventListener('resize', setFullHeight);
+            
+            // 添加键盘快捷键
+            document.addEventListener('keydown', (e) => {
+                // ESC键退出管理员模式
+                if (e.key === 'Escape' && adminMode) {
+                    toggleAdminMode(false);
+                    showToast('已退出管理员模式');
+                }
+                // Ctrl+Shift+M 激活管理员模式
+                if (e.ctrlKey && e.shiftKey && e.key === 'M') {
+                    toggleAdminMode(true);
+                    showToast('管理员模式已激活 (快捷键)');
+                }
+            });
         });
     </script>
 </body>
