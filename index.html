@@ -143,4 +143,143 @@
         // ==================== 🔧 配置部分 ====================
         // 🔴 重要：请替换为你自己的 Firebase 项目配置！
         // 获取方式：Firebase 控制台 -> 项目设置 -> 常规 -> 你的应用 -> SDK 设置和配置
- 
+        const firebaseConfig = {
+            apiKey: "AIzaSyDJEgkdLHpjKdyngP5XuY_AJGUc5mOjeCg",
+            authDomain: "public-chat-board.firebaseapp.com",
+            databaseURL: "https://public-chat-board-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "public-chat-board",
+            storageBucket: "public-chat-board.firebasestorage.app",
+            messagingSenderId: "822856065923",
+            appId: "1:822856065923:web:833a3f1a6a4fc4840e8cb6"
+        };
+
+        // ==================== 🚀 初始化 ====================
+        // 初始化 Firebase 应用
+        const app = firebase.initializeApp(firebaseConfig);
+        // 获取实时数据库的引用
+        const database = firebase.database();
+
+        // ==================== 💬 页面元素 ====================
+        const chatBox = document.getElementById('chat-box');
+        const messageInput = document.getElementById('message-input');
+        const sendButton = document.getElementById('send-button');
+        const emptyState = document.getElementById('empty-state');
+
+        // 生成一个简易的、持久的访客ID (存储于本地，刷新不变)
+        let userId = localStorage.getItem('chat_user_id');
+        if (!userId) {
+            userId = 'guest_' + Math.random().toString(36).substring(2, 11);
+            localStorage.setItem('chat_user_id', userId);
+        }
+
+        // ==================== ✨ 功能函数 ====================
+
+        // 1. 发送消息
+        function sendMessage() {
+            const messageText = messageInput.value.trim();
+            if (messageText === '') return;
+
+            // 在数据库的“messages”节点下推送一条新数据
+            database.ref('messages/').push({
+                text: messageText,
+                // ✅ 核心：使用服务器时间戳
+                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                userId: userId // 用于区分不同用户（前端简易实现）
+            });
+
+            messageInput.value = ''; // 清空输入框
+            messageInput.focus();    // 重新聚焦到输入框
+        }
+
+        // 2. 格式化时间戳为可读字符串
+        function formatTimestamp(timestamp) {
+            const date = new Date(timestamp);
+            // 格式化为：今天/昨天/前天 或 月-日 时:分
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+            
+            const diffDays = Math.round((today - messageDate) / (1000 * 60 * 60 * 24));
+            
+            let dateStr;
+            if (diffDays === 0) dateStr = '今天';
+            else if (diffDays === 1) dateStr = '昨天';
+            else if (diffDays === 2) dateStr = '前天';
+            else dateStr = `${date.getMonth()+1}-${date.getDate()}`;
+            
+            const timeStr = date.toLocaleTimeString('zh-CN', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: false 
+            });
+            
+            return `${dateStr} ${timeStr}`;
+        }
+
+        // 3. 安全地显示HTML内容（防止XSS攻击）
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return unsafe.toString()
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // ==================== 🎯 事件监听 ====================
+        sendButton.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        // ==================== 📡 监听实时数据 ====================
+        // 监听“messages”节点的变化
+        database.ref('messages/').on('value', (snapshot) => {
+            const data = snapshot.val();
+            chatBox.innerHTML = ''; // 清空当前显示
+
+            if (data) {
+                emptyState.style.display = 'none';
+                
+                // 将数据对象转换为数组，并包含每条消息的ID
+                const messagesArray = Object.entries(data).map(([key, value]) => ({
+                    id: key,
+                    ...value
+                }));
+
+                // 按时间戳升序排序（最旧的在最前）
+                messagesArray.sort((a, b) => a.timestamp - b.timestamp);
+
+                // 循环遍历并渲染每条消息
+                messagesArray.forEach(msg => {
+                    const messageElement = document.createElement('div');
+                    // 判断是否是当前用户发送的消息
+                    const isCurrentUser = msg.userId === userId;
+                    messageElement.className = `message ${isCurrentUser ? 'sent' : 'received'}`;
+                    messageElement.dataset.id = msg.id;
+
+                    // 构建消息HTML
+                    const formattedTime = formatTimestamp(msg.timestamp);
+                    messageElement.innerHTML = `
+                        <div class="message-content">${escapeHtml(msg.text)}</div>
+                        <span class="message-time">${formattedTime}</span>
+                    `;
+                    
+                    chatBox.appendChild(messageElement);
+                });
+                
+                // 滚动到最新消息
+                chatBox.scrollTop = chatBox.scrollHeight;
+            } else {
+                emptyState.style.display = 'block';
+            }
+        });
+
+        // 页面加载后自动聚焦到输入框
+        window.addEventListener('load', () => {
+            messageInput.focus();
+        });
+    </script>
+</body>
+</html>
