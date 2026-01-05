@@ -76,6 +76,91 @@
         }
         .message.received .message-time { color: #65676b; }
         .message.sent .message-time { color: rgba(255, 255, 255, 0.85); text-align: right; }
+        
+        /* 消息操作菜单样式 */
+        .message-actions {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .message:hover .message-actions {
+            opacity: 1;
+        }
+        .action-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+            color: inherit;
+            font-size: 0.9em;
+            margin-left: 5px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        .message.received .action-btn {
+            background: rgba(0, 0, 0, 0.1);
+            color: #65676b;
+        }
+        .message.received .action-btn:hover {
+            background: rgba(0, 0, 0, 0.15);
+        }
+        
+        /* 编辑模式样式 */
+        .edit-mode {
+            padding: 5px;
+        }
+        .edit-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e4e6eb;
+            border-radius: 12px;
+            font-size: 1em;
+            outline: none;
+            margin-bottom: 10px;
+            resize: vertical;
+            min-height: 60px;
+        }
+        .edit-input:focus {
+            border-color: #4776E6;
+            box-shadow: 0 0 0 3px rgba(71, 118, 230, 0.2);
+        }
+        .edit-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        .edit-btn, .cancel-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+        .edit-btn {
+            background: #4776E6;
+            color: white;
+        }
+        .edit-btn:hover {
+            background: #3a64d0;
+        }
+        .cancel-btn {
+            background: #f0f2f5;
+            color: #65676b;
+        }
+        .cancel-btn:hover {
+            background: #e4e6eb;
+        }
+        
         .input-area {
             padding: 25px;
             background-color: #f8f9fa;
@@ -119,7 +204,6 @@
             font-style: italic;
         }
     </style>
-    <!-- 引入 Firebase SDK (使用兼容版本以便于理解) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 </head>
@@ -127,10 +211,9 @@
     <div class="container">
         <div class="header">
             <h1>公共留言板</h1>
-            <p>所有消息公开可见，刷新页面后消息会保留</p>
+            <p>所有消息公开可见，可以编辑和删除自己的消息</p>
         </div>
         <div class="chat-container" id="chat-box">
-            <!-- 消息将动态加载在这里 -->
             <div class="empty-state" id="empty-state">还没有消息，快来第一个发言吧！</div>
         </div>
         <div class="input-area">
@@ -140,9 +223,7 @@
     </div>
 
     <script>
-        // ==================== 🔧 配置部分 ====================
-        // 🔴 重要：请替换为你自己的 Firebase 项目配置！
-        // 获取方式：Firebase 控制台 -> 项目设置 -> 常规 -> 你的应用 -> SDK 设置和配置
+        // 🔧 配置部分
         const firebaseConfig = {
             apiKey: "AIzaSyDJEgkdLHpjKdyngP5XuY_AJGUc5mOjeCg",
             authDomain: "public-chat-board.firebaseapp.com",
@@ -153,48 +234,40 @@
             appId: "1:822856065923:web:833a3f1a6a4fc4840e8cb6"
         };
 
-        // ==================== 🚀 初始化 ====================
-        // 初始化 Firebase 应用
+        // 🚀 初始化
         const app = firebase.initializeApp(firebaseConfig);
-        // 获取实时数据库的引用
         const database = firebase.database();
 
-        // ==================== 💬 页面元素 ====================
+        // 💬 页面元素
         const chatBox = document.getElementById('chat-box');
         const messageInput = document.getElementById('message-input');
         const sendButton = document.getElementById('send-button');
         const emptyState = document.getElementById('empty-state');
 
-        // 生成一个简易的、持久的访客ID (存储于本地，刷新不变)
+        // 生成用户ID
         let userId = localStorage.getItem('chat_user_id');
         if (!userId) {
             userId = 'guest_' + Math.random().toString(36).substring(2, 11);
             localStorage.setItem('chat_user_id', userId);
         }
 
-        // ==================== ✨ 功能函数 ====================
-
-        // 1. 发送消息
+        // ✨ 功能函数
         function sendMessage() {
             const messageText = messageInput.value.trim();
             if (messageText === '') return;
 
-            // 在数据库的“messages”节点下推送一条新数据
             database.ref('messages/').push({
                 text: messageText,
-                // ✅ 核心：使用服务器时间戳
                 timestamp: firebase.database.ServerValue.TIMESTAMP,
-                userId: userId // 用于区分不同用户（前端简易实现）
+                userId: userId
             });
 
-            messageInput.value = ''; // 清空输入框
-            messageInput.focus();    // 重新聚焦到输入框
+            messageInput.value = '';
+            messageInput.focus();
         }
 
-        // 2. 格式化时间戳为可读字符串
         function formatTimestamp(timestamp) {
             const date = new Date(timestamp);
-            // 格式化为：今天/昨天/前天 或 月-日 时:分
             const now = new Date();
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -216,7 +289,6 @@
             return `${dateStr} ${timeStr}`;
         }
 
-        // 3. 安全地显示HTML内容（防止XSS攻击）
         function escapeHtml(unsafe) {
             if (!unsafe) return '';
             return unsafe.toString()
@@ -227,56 +299,128 @@
                 .replace(/'/g, "&#039;");
         }
 
-        // ==================== 🎯 事件监听 ====================
+        // 🆕 编辑功能函数
+        function startEditMessage(messageId, currentText) {
+            const messageElement = document.querySelector(`[data-id="${messageId}"]`);
+            if (!messageElement) return;
+            
+            // 切换到编辑模式
+            messageElement.classList.add('edit-mode');
+            messageElement.innerHTML = `
+                <textarea class="edit-input">${escapeHtml(currentText)}</textarea>
+                <div class="edit-buttons">
+                    <button class="cancel-btn" onclick="cancelEdit('${messageId}')">取消</button>
+                    <button class="edit-btn" onclick="saveEdit('${messageId}')">保存</button>
+                </div>
+            `;
+            messageElement.querySelector('.edit-input').focus();
+        }
+
+        function saveEdit(messageId) {
+            const messageElement = document.querySelector(`[data-id="${messageId}"]`);
+            if (!messageElement) return;
+            
+            const newText = messageElement.querySelector('.edit-input').value.trim();
+            if (newText === '') {
+                alert('消息不能为空');
+                return;
+            }
+            
+            // 更新数据库
+            database.ref('messages/' + messageId).update({
+                text: newText,
+                edited: true,
+                editedAt: firebase.database.ServerValue.TIMESTAMP
+            });
+        }
+
+        function cancelEdit(messageId) {
+            // 取消编辑，重新渲染消息
+            renderMessages();
+        }
+
+        // 🗑️ 删除功能函数
+        function deleteMessage(messageId) {
+            if (!confirm('确定要删除这条消息吗？')) return;
+            
+            // 从数据库删除
+            database.ref('messages/' + messageId).remove();
+        }
+
+        // 🎨 渲染消息函数
+        function renderMessages(messagesArray) {
+            chatBox.innerHTML = '';
+            
+            if (messagesArray && messagesArray.length > 0) {
+                emptyState.style.display = 'none';
+                
+                messagesArray.forEach(msg => {
+                    const isCurrentUser = msg.userId === userId;
+                    const messageElement = document.createElement('div');
+                    messageElement.className = `message ${isCurrentUser ? 'sent' : 'received'}`;
+                    messageElement.dataset.id = msg.id;
+                    
+                    const formattedTime = formatTimestamp(msg.timestamp);
+                    let timeDisplay = formattedTime;
+                    if (msg.edited) {
+                        const editedTime = msg.editedAt ? formatTimestamp(msg.editedAt) : '之前';
+                        timeDisplay += ` (编辑于${editedTime})`;
+                    }
+                    
+                    // 构建消息内容
+                    messageElement.innerHTML = `
+                        <div class="message-content">${escapeHtml(msg.text)}</div>
+                        <span class="message-time">${timeDisplay}</span>
+                    `;
+                    
+                    // 只有当前用户才能看到操作按钮
+                    if (isCurrentUser) {
+                        const actionsDiv = document.createElement('div');
+                        actionsDiv.className = 'message-actions';
+                        actionsDiv.innerHTML = `
+                            <button class="action-btn" onclick="startEditMessage('${msg.id}', '${escapeHtml(msg.text).replace(/'/g, "\\'")}')" title="编辑">
+                                ✏️
+                            </button>
+                            <button class="action-btn" onclick="deleteMessage('${msg.id}')" title="删除">
+                                🗑️
+                            </button>
+                        `;
+                        messageElement.appendChild(actionsDiv);
+                    }
+                    
+                    chatBox.appendChild(messageElement);
+                });
+                
+                chatBox.scrollTop = chatBox.scrollHeight;
+            } else {
+                emptyState.style.display = 'block';
+            }
+        }
+
+        // 🎯 事件监听
         sendButton.addEventListener('click', sendMessage);
         messageInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') sendMessage();
         });
 
-        // ==================== 📡 监听实时数据 ====================
-        // 监听“messages”节点的变化
+        // 📡 监听实时数据
         database.ref('messages/').on('value', (snapshot) => {
             const data = snapshot.val();
-            chatBox.innerHTML = ''; // 清空当前显示
-
+            
             if (data) {
-                emptyState.style.display = 'none';
-                
-                // 将数据对象转换为数组，并包含每条消息的ID
                 const messagesArray = Object.entries(data).map(([key, value]) => ({
                     id: key,
                     ...value
                 }));
-
-                // 按时间戳升序排序（最旧的在最前）
-                messagesArray.sort((a, b) => a.timestamp - b.timestamp);
-
-                // 循环遍历并渲染每条消息
-                messagesArray.forEach(msg => {
-                    const messageElement = document.createElement('div');
-                    // 判断是否是当前用户发送的消息
-                    const isCurrentUser = msg.userId === userId;
-                    messageElement.className = `message ${isCurrentUser ? 'sent' : 'received'}`;
-                    messageElement.dataset.id = msg.id;
-
-                    // 构建消息HTML
-                    const formattedTime = formatTimestamp(msg.timestamp);
-                    messageElement.innerHTML = `
-                        <div class="message-content">${escapeHtml(msg.text)}</div>
-                        <span class="message-time">${formattedTime}</span>
-                    `;
-                    
-                    chatBox.appendChild(messageElement);
-                });
                 
-                // 滚动到最新消息
-                chatBox.scrollTop = chatBox.scrollHeight;
+                messagesArray.sort((a, b) => a.timestamp - b.timestamp);
+                renderMessages(messagesArray);
             } else {
-                emptyState.style.display = 'block';
+                renderMessages([]);
             }
         });
 
-        // 页面加载后自动聚焦到输入框
+        // 页面加载后自动聚焦
         window.addEventListener('load', () => {
             messageInput.focus();
         });
