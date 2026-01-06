@@ -26,13 +26,11 @@
             height: 100vh;
         }
         
-        /* 确保容器正确使用可用空间 */
         .container { 
             display: flex; 
             flex-direction: column; 
             height: 100vh;
             background: white;
-            position: relative;
         }
         
         .header { 
@@ -48,13 +46,12 @@
             font-weight: 600;
         }
         
-        /* 聊天区域确保可以滚动 */
         .chat-container { 
             flex: 1; 
             overflow-y: auto; 
             -webkit-overflow-scrolling: touch;
             padding: 15px;
-            min-height: 0; /* 重要：确保在移动端正确伸缩 */
+            min-height: 0;
         }
         
         .message { 
@@ -66,7 +63,7 @@
             color: #050505;
             position: relative;
             word-wrap: break-word;
-            font-size: 16px; /* 移动端字体大小 */
+            font-size: 16px;
             line-height: 1.4;
         }
         
@@ -77,7 +74,6 @@
             display: block;
         }
         
-        /* 管理功能按钮 */
         .message-actions { 
             display: none; 
             position: absolute;
@@ -98,16 +94,15 @@
             border-radius: 4px; 
             font-size: 12px; 
             cursor: pointer;
-            min-height: 24px; /* 移动端触摸友好 */
+            min-height: 24px;
         }
         
-        /* 输入区域固定在底部 */
         .input-area { 
             padding: 12px 15px; 
             background: #f8f9fa; 
             border-top: 1px solid #ddd; 
             display: flex;
-            flex-shrink: 0; /* 防止在移动端被压缩 */
+            flex-shrink: 0;
             align-items: center;
         }
         
@@ -116,9 +111,9 @@
             padding: 12px 15px; 
             border: 1px solid #ddd; 
             border-radius: 20px; 
-            font-size: 16px; /* 防止iOS缩放 */
+            font-size: 16px;
             background: white;
-            -webkit-appearance: none; /* 移除iOS默认样式 */
+            -webkit-appearance: none;
         }
         
         #send-button { 
@@ -130,7 +125,7 @@
             margin-left: 10px; 
             font-size: 16px;
             font-weight: 500;
-            min-height: 44px; /* 移动端最小触摸尺寸 */
+            min-height: 44px;
         }
         
         .empty-state { 
@@ -140,7 +135,6 @@
             font-style: italic;
         }
         
-        /* 移动端优化 */
         @media (max-width: 768px) {
             .message {
                 max-width: 90%;
@@ -174,61 +168,42 @@
         </div>
     </div>
 
-    <!-- 使用传统script标签而非module，确保兼容性 -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     
     <script>
-        // 🔧 使用你提供的新Firebase配置
         const firebaseConfig = {
             apiKey: "AIzaSyBmxnwMtmrBUILXyUvbspkeHHAzkBVl5RM",
             authDomain: "chat-e1e6a.firebaseapp.com",
+            databaseURL: "https://chat-e1e6a-default-rtdb.asia-southeast1.firebasedatabase.app",
             projectId: "chat-e1e6a",
             storageBucket: "chat-e1e6a.firebasestorage.app",
             messagingSenderId: "302190954260",
             appId: "1:302190954260:web:9469fff9dd85063b862401",
-            measurementId: "G-9Z98RXKKTG",
-            // 注意：你提供的配置缺少databaseURL，这是实时数据库必需的
-            // 请到Firebase控制台 -> Realtime Database获取你的数据库URL
-            // 格式类似：https://chat-e1e6a-default-rtdb.firebaseio.com
-            databaseURL: "https://chat-e1e6a-default-rtdb.asia-southeast1.firebasedatabase.app"
+            measurementId: "G-9Z98RXKKTG"
         };
 
-        // 🚨 重要：请务必填写上面的databaseURL！
-        // 获取方式：
-        // 1. 打开Firebase控制台 (console.firebase.google.com)
-        // 2. 选择你的项目 "chat-e1e6a"
-        // 3. 左侧菜单点击"Realtime Database"
-        // 4. 在页面顶部找到数据库URL，复制并替换上面的"请在此处填写你的数据库URL"
-
-        // 🚀 初始化Firebase
         const app = firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        // 💬 获取页面元素
         const chatBox = document.getElementById('chat-box');
         const messageInput = document.getElementById('message-input');
         const sendButton = document.getElementById('send-button');
         const emptyState = document.getElementById('empty-state');
 
-        // 📱 状态变量
         let adminMode = false;
-        let editingMessageId = null;
 
-        // 📤 发送消息函数
         function sendMessage() {
             const text = messageInput.value.trim();
             if (!text) return;
 
-            // 检查是否为"修改"关键词
             if (text === "修改") {
                 adminMode = true;
                 updateMessagesDisplay();
                 messageInput.value = "";
-                return; // 不存入数据库
+                return;
             }
 
-            // 普通消息，存入数据库
             database.ref('messages/').push({
                 text: text,
                 timestamp: firebase.database.ServerValue.TIMESTAMP
@@ -238,45 +213,38 @@
             messageInput.focus();
         }
 
-        // 🕐 格式化时间显示
+        // 🕐 智能时间格式化函数
         function formatTime(timestamp) {
-                const date = new Date(timestamp);
-                    const now = new Date();
-                        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                            const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-                                
-                                    const hours = date.getHours().toString().padStart(2, '0');
-                                        const minutes = date.getMinutes().toString().padStart(2, '0');
-                                            const timeStr = `${hours}:${minutes}`;
-                                                
-                                                    // 如果是今天
-                                                        if (messageDate.getTime() === today.getTime()) {
-                                                                return `今天 ${timeStr}`;
-                                                                    }
-                                                                        
-                                                                            // 如果是昨天
-                                                                                const yesterday = new Date(today);
-                                                                                    yesterday.setDate(yesterday.getDate() - 1);
-                                                                                        if (messageDate.getTime() === yesterday.getTime()) {
-                                                                                                return `昨天 ${timeStr}`;
-                                                                                                    }
-                                                                                                        
-                                                                                                            // 其他日期显示完整日期
-                                                                                                                const year = date.getFullYear();
-                                                                                                                    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-                                                                                                                        const day = date.getDate().toString().padStart(2, '0');
-                                                                                                                            
-                                                                                                                                // 如果是今年，不显示年份
-                                                                                                                                    if (date.getFullYear() === now.getFullYear()) {
-                                                                                                                                            return `${month}-${day} ${timeStr}`;
-                                                                                                                                                }
-                                                                                                                                                    
-                                                                                                                                                        // 跨年显示完整年份
-                                                                                                                                                            return `${year}-${month}-${day} ${timeStr}`;
-                                                                                                                                                            }
+            const date = new Date(timestamp);
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+            
+            const hours = date.getHours().toString().padStart(2, '0');
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+            const timeStr = `${hours}:${minutes}`;
+            
+            if (messageDate.getTime() === today.getTime()) {
+                return `今天 ${timeStr}`;
+            }
+            
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            if (messageDate.getTime() === yesterday.getTime()) {
+                return `昨天 ${timeStr}`;
+            }
+            
+            const year = date.getFullYear();
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const day = date.getDate().toString().padStart(2, '0');
+            
+            if (date.getFullYear() === now.getFullYear()) {
+                return `${month}-${day} ${timeStr}`;
+            }
+            
+            return `${year}-${month}-${day} ${timeStr}`;
         }
 
-        // 🎨 更新消息显示
         function updateMessagesDisplay() {
             database.ref('messages/').once('value', (snapshot) => {
                 const data = snapshot.val();
@@ -321,18 +289,15 @@
                     chatBox.appendChild(div);
                 });
                 
-                // 滚动到底部
                 setTimeout(() => {
                     chatBox.scrollTop = chatBox.scrollHeight;
                 }, 50);
             });
         }
 
-        // ✏️ 编辑消息
         function editMessage(id) {
             if (!adminMode) return;
             
-            editingMessageId = id;
             database.ref('messages/' + id).once('value', (snapshot) => {
                 const msg = snapshot.val();
                 const newText = prompt('修改消息:', msg.text);
@@ -346,7 +311,6 @@
             });
         }
 
-        // 🗑️ 删除消息
         function deleteMessage(id) {
             if (!adminMode) return;
             
@@ -355,54 +319,32 @@
             }
         }
 
-        // 🎯 初始化页面
         function initializePage() {
-            // 确保页面布局正确
-            document.body.style.visibility = 'visible';
-            
-            // 聚焦到输入框
-            messageInput.focus();
-            
-            // 更新消息显示
-            updateMessagesDisplay();
-            
-            // 设置实时监听
-            database.ref('messages/').on('value', updateMessagesDisplay);
-            
-            console.log('页面初始化完成，Firebase已连接');
+            setTimeout(() => {
+                const container = document.querySelector('.container');
+                container.style.height = window.innerHeight + 'px';
+                messageInput.focus();
+                updateMessagesDisplay();
+            }, 100);
         }
 
-        // 📝 事件监听
         sendButton.addEventListener('click', sendMessage);
         messageInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') sendMessage();
         });
 
-        // 📱 处理移动端键盘弹出
-        let viewportHeight = window.innerHeight;
-        window.addEventListener('resize', () => {
-            if (window.innerHeight < viewportHeight) {
-                // 键盘弹出，确保输入框可见
-                setTimeout(() => {
-                    document.activeElement.scrollIntoView({behavior: 'smooth', block: 'center'});
-                }, 300);
-            }
-            viewportHeight = window.innerHeight;
-        });
-
-        // 🚀 页面加载完成后初始化
-        // 修复：确保所有资源加载完成再初始化
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initializePage);
-        } else {
+        document.addEventListener('DOMContentLoaded', function() {
             initializePage();
-        }
+            database.ref('messages/').on('value', updateMessagesDisplay);
+            
+            window.addEventListener('resize', function() {
+                const container = document.querySelector('.container');
+                container.style.height = window.innerHeight + 'px';
+            });
+        });
         
-        // 全局暴露函数供按钮调用
         window.editMessage = editMessage;
         window.deleteMessage = deleteMessage;
     </script>
 </body>
 </html>
-
-
